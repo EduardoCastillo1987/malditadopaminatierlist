@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tier List</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+  :root {
+    --bg:#0d0d0f; --surface:#17171a; --border:#2a2a30;
+    --text:#f0f0f0; --muted:#555; --accent:#ff9f43;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:20px 16px 80px;}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+  #title-input{font-family:'Bebas Neue',sans-serif;font-size:clamp(26px,5vw,46px);background:transparent;border:none;color:var(--text);outline:none;letter-spacing:2px;border-bottom:2px solid transparent;transition:border-color .2s;max-width:55vw;}
+  #title-input:focus{border-bottom-color:var(--accent);}
+  .header-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  button{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;border:none;cursor:pointer;padding:8px 14px;border-radius:6px;transition:all .15s;white-space:nowrap;}
+  .btn-primary{background:var(--accent);color:#111;}
+  .btn-primary:hover{filter:brightness(1.12);}
+  .btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:#555;}
+
+  /* TIERS */
+  .tier{display:flex;align-items:stretch;margin-bottom:5px;min-height:84px;}
+  .tier-label{width:140px;min-width:140px;display:flex;align-items:center;justify-content:center;border-radius:8px 0 0 8px;position:relative;flex-shrink:0;cursor:pointer;padding:8px 10px;}
+  .tier-label-input{font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;background:transparent;border:none;color:rgba(0,0,0,.72);outline:none;text-align:center;width:100%;cursor:pointer;text-shadow:0 1px 2px rgba(255,255,255,.2);word-break:break-word;line-height:1.3;resize:none;overflow:hidden;letter-spacing:.3px;}
+  .tier-del-btn{position:absolute;top:3px;right:4px;background:rgba(0,0,0,.35);border:none;color:rgba(255,255,255,.75);border-radius:50%;width:16px;height:16px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0;transition:opacity .15s;}
+  .tier-label:hover .tier-del-btn{opacity:1;}
+
+  .tier-items{flex:1;background:#181820;display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:6px;border-radius:0 8px 8px 0;border:1px solid var(--border);border-left:none;transition:background .12s;min-height:84px;position:relative;}
+  .tier-items.drag-over{background:#222232;border-color:#666;}
+
+  /* drop indicator */
+  .drop-indicator{display:none;width:3px;height:72px;background:var(--accent);border-radius:3px;flex-shrink:0;pointer-events:none;box-shadow:0 0 8px var(--accent);}
+
+  /* ITEMS */
+  .item{position:relative;cursor:grab;user-select:none;border-radius:5px;border:2px solid transparent;transition:border-color .12s,transform .1s,box-shadow .1s;flex-shrink:0;}
+  .item:hover{border-color:rgba(255,255,255,.22);box-shadow:0 3px 14px rgba(0,0,0,.55);}
+  .item:active{cursor:grabbing;transform:scale(.96);}
+  .item.dragging{opacity:.25;transform:scale(.9);}
+  .item.has-img{width:72px;height:72px;overflow:hidden;background:#111;}
+  .item.has-img img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;}
+  .item-label-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));color:#fff;font-size:10px;font-weight:600;padding:3px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .15s;}
+  .item.has-img:hover .item-label-overlay{opacity:1;}
+  .item.has-text{background:var(--surface);border-color:var(--border);padding:6px 10px;font-size:13px;font-weight:500;max-width:160px;word-break:break-word;display:flex;align-items:center;gap:6px;}
+  .item.has-text:hover{border-color:#444;}
+  .item-del-overlay{position:absolute;top:2px;right:2px;background:rgba(180,30,30,.9);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0;transition:opacity .12s;z-index:10;line-height:1;}
+  .item:hover .item-del-overlay{opacity:1;}
+  .text-del{background:none;color:#ff5555;border:none;cursor:pointer;padding:0;font-size:14px;line-height:1;opacity:0;transition:opacity .12s;}
+  .item.has-text:hover .text-del{opacity:1;}
+
+  /* POOL */
+  .pool-section{margin-top:22px;}
+  .pool-label{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;}
+  #pool{background:var(--surface);border:1px dashed var(--border);border-radius:8px;padding:10px;min-height:88px;display:flex;flex-wrap:wrap;gap:5px;align-items:flex-start;transition:background .12s,border-color .12s;}
+  #pool.drag-over{background:#1c1c2a;border-color:#666;}
+
+  /* UPLOAD */
+  .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-top:10px;}
+  .upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(255,159,67,.05);}
+  .upload-zone .icon{font-size:30px;margin-bottom:6px;}
+  .upload-zone strong{font-size:14px;display:block;margin-bottom:4px;}
+  .upload-zone p{color:var(--muted);font-size:12px;}
+  #file-input{display:none;}
+  .add-row{display:flex;gap:8px;margin-top:10px;}
+  #new-item-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+  #new-item-input:focus{border-color:var(--accent);}
+  #new-item-input::placeholder{color:#444;}
+
+  /* MODALS */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:200;}
+  .modal-bg.open{display:flex;}
+  .modal{background:#1c1c22;border:1px solid var(--border);border-radius:12px;padding:24px;width:min(440px,92vw);}
+  .modal h2{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:14px;}
+  .modal p{color:var(--muted);font-size:13px;margin-bottom:14px;line-height:1.5;}
+  .color-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+  .color-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .12s,border-color .12s;}
+  .color-swatch:hover{transform:scale(1.18);border-color:rgba(255,255,255,.5);}
+  .color-custom{display:flex;gap:8px;align-items:center;margin-bottom:16px;}
+  .color-custom input[type=text]{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:13px;outline:none;}
+  .color-custom input[type=color]{width:38px;height:34px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;padding:2px;}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .url-box{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:11px;word-break:break-all;color:var(--accent);margin-bottom:14px;max-height:90px;overflow-y:auto;font-family:monospace;}
+  .share-note{background:#1f1a10;border:1px solid #3a2e10;border-radius:6px;padding:10px 12px;font-size:12px;color:#c0a060;margin-bottom:14px;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<header>
+  <input id="title-input" value="MI TIER LIST" maxlength="40" spellcheck="false">
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="addTier()">+ Tier</button>
+    <button class="btn-primary" onclick="openShare()">&#128279; Compartir</button>
+  </div>
+</header>
+
+<div id="tiers-container"></div>
+
+<div class="pool-section">
+  <div class="pool-label">SIN CLASIFICAR</div>
+  <div id="pool"></div>
+  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+    <div class="icon">&#128444;&#65039;</div>
+    <strong>Subir im&#225;genes</strong>
+    <p>Haz clic o arrastra im&#225;genes aqu&#237; &middot; PNG, JPG, GIF, WebP &middot; M&#250;ltiples a la vez</p>
+  </div>
+  <input type="file" id="file-input" multiple accept="image/*">
+  <div class="add-row">
+    <input id="new-item-input" placeholder="O escribe un &#237;tem de texto y presiona Enter&#8230;" maxlength="60">
+    <button class="btn-primary" onclick="addTextItem()">A&#241;adir texto</button>
+  </div>
+</div>
+
+<!-- drop indicator (singleton, moved around DOM) -->
+<div class="drop-indicator" id="drop-indicator"></div>
+
+<!-- Color modal -->
+<div class="modal-bg" id="color-modal">
+  <div class="modal">
+    <h2>Color de la tier</h2>
+    <div class="color-grid" id="color-grid"></div>
+    <div class="color-custom">
+      <input type="color" id="color-picker-native" value="#ff9f43">
+      <input type="text" id="color-picker-hex" value="#ff9f43" maxlength="7" placeholder="#rrggbb">
+      <button class="btn-ghost" onclick="applyCustomColor()">OK</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeColorModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Share modal -->
+<div class="modal-bg" id="share-modal">
+  <div class="modal">
+    <h2>Compartir Tier List</h2>
+    <div class="share-note">&#9888;&#65039; Las im&#225;genes se incluyen en el enlace como datos. Si subiste muchas im&#225;genes grandes, el enlace puede ser muy largo &#8212; en ese caso comparte el archivo .html directamente.</div>
+    <div class="url-box" id="share-url"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeShare()">Cerrar</button>
+      <button class="btn-primary" onclick="copyUrl()">Copiar enlace</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────
+var state = {
+  title: 'MI TIER LIST',
+  tiers: [
+    { id: 't1', label: 'S', color: '#ff4d4d', items: [] },
+    { id: 't2', label: 'A', color: '#ff9f43', items: [] },
+    { id: 't3', label: 'B', color: '#ffd93d', items: [] },
+    { id: 't4', label: 'C', color: '#6bcb77', items: [] },
+    { id: 't5', label: 'D', color: '#4ecdc4', items: [] },
+    { id: 't6', label: 'F', color: '#a29bfe', items: [] }
+  ],
+  pool: []
+};
+
+var dragItem = null, dragSource = null, editingTierId = null;
+var idCount = 100;
+
+var PRESET_COLORS = [
+  '#ff4d4d','#ff7f50','#ff9f43','#ffd93d','#c8f24d',
+  '#6bcb77','#4ecdc4','#45b7d1','#5a8dee','#a29bfe',
+  '#e056fd','#fd79a8','#b2bec3','#636e72','#2d3436'
+];
+
+function uid() {
+  return 'i' + (++idCount) + '_' + Math.random().toString(36).slice(2, 5);
+}
+
+// ── Persistence ───────────────────────────────
+function save() {
+  try { localStorage.setItem('tl_v3', JSON.stringify(state)); } catch(e) {}
+}
+
+(function loadState() {
+  var hash = window.location.hash.slice(1);
+  if (hash) {
+    try { state = JSON.parse(decodeURIComponent(atob(hash))); return; } catch(e) {}
+  }
+  try {
+    var s = localStorage.getItem('tl_v3');
+    if (s) state = JSON.parse(s);
+  } catch(e) {}
+})();
+
+// ── Helpers ───────────────────────────────────
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function hideIndicator() {
+  var ind = document.getElementById('drop-indicator');
+  ind.style.display = 'none';
+  if (ind.parentNode) ind.parentNode.removeChild(ind);
+  document.body.appendChild(ind);
+}
+
+// Given a container and mouse position, return the element AFTER which we should insert,
+// or null to append at end. Works for both horizontal and wrapped layouts.
+function getDragAfterElement(container, x, y) {
+  var items = Array.from(container.querySelectorAll('.item:not(.dragging)'));
+  var result = null;
+  var closestDist = Infinity;
+
+  items.forEach(function(el) {
+    var rect = el.getBoundingClientRect();
+    // center of the item
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    // distance to cursor
+    var dist = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+    // only consider items where cursor is to the LEFT of their center
+    // (meaning: insert before this item)
+    if (x < cx && dist < closestDist) {
+      closestDist = dist;
+      result = el;
+    }
+  });
+  return result;
+}
+
+// ── Render ────────────────────────────────────
+function render() {
+  document.getElementById('title-input').value = state.title;
+  renderTiers();
+  renderPool();
+}
+
+function renderTiers() {
+  var c = document.getElementById('tiers-container');
+  c.innerHTML = '';
+  state.tiers.forEach(function(t) { c.appendChild(buildTierEl(t)); });
+}
+
+function buildTierEl(tier) {
+  var row = document.createElement('div');
+  row.className = 'tier';
+
+  // Label
+  var label = document.createElement('div');
+  label.className = 'tier-label';
+  label.style.background = tier.color;
+  label.title = 'Clic para cambiar color';
+  label.onclick = function() { openColorModal(tier.id); };
+
+  var inp = document.createElement('textarea');
+  inp.className = 'tier-label-input';
+  inp.value = tier.label;
+  inp.maxLength = 40;
+  inp.rows = 2;
+  inp.spellcheck = false;
+  inp.onclick = function(e) { e.stopPropagation(); };
+  inp.oninput = function(e) { tier.label = e.target.value; autoResize(inp); save(); };
+  label.appendChild(inp);
+  requestAnimationFrame(function() { autoResize(inp); });
+
+  var delBtn = document.createElement('button');
+  delBtn.className = 'tier-del-btn';
+  delBtn.textContent = '\u00D7';
+  delBtn.onclick = function(e) {
+    e.stopPropagation();
+    if (!confirm('Eliminar esta tier? Los items van al pool.')) return;
+    state.pool.push.apply(state.pool, tier.items);
+    state.tiers = state.tiers.filter(function(t) { return t.id !== tier.id; });
+    save(); render();
+  };
+  label.appendChild(delBtn);
+
+  // Items zone
+  var zone = document.createElement('div');
+  zone.className = 'tier-items';
+
+  zone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    zone.classList.add('drag-over');
+    var ind = document.getElementById('drop-indicator');
+    var afterEl = getDragAfterElement(zone, e.clientX, e.clientY);
+    if (afterEl) {
+      zone.insertBefore(ind, afterEl);
+    } else {
+      zone.appendChild(ind);
+    }
+    ind.style.display = 'block';
+  });
+
+  zone.addEventListener('dragleave', function(e) {
+    if (!zone.contains(e.relatedTarget)) {
+      zone.classList.remove('drag-over');
+      hideIndicator();
+    }
+  });
+
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (e.dataTransfer.files && e.dataTransfer.files.length) {
+      hideIndicator();
+      handleFiles(e.dataTransfer.files, tier.id);
+    } else {
+      var afterEl = getDragAfterElement(zone, e.clientX, e.clientY);
+      var afterId = afterEl ? afterEl.dataset.itemId : null;
+      hideIndicator();
+      dropToTier(tier.id, afterId);
+    }
+  });
+
+  tier.items.forEach(function(item) {
+    var el = buildItemEl(item, tier.id);
+    zone.appendChild(el);
+  });
+
+  row.appendChild(label);
+  row.appendChild(zone);
+  return row;
+}
+
+function buildItemEl(item, sourceId) {
+  var el = document.createElement('div');
+  el.className = item.img ? 'item has-img' : 'item has-text';
+  el.draggable = true;
+  el.dataset.itemId = item.id;
+
+  if (item.img) {
+    var img = document.createElement('img');
+    img.src = item.img;
+    img.alt = item.text || '';
+    el.appendChild(img);
+
+    if (item.text) {
+      var ov = document.createElement('div');
+      ov.className = 'item-label-overlay';
+      ov.textContent = item.text;
+      el.appendChild(ov);
+    }
+
+    var del = document.createElement('button');
+    del.className = 'item-del-overlay';
+    del.textContent = '\u00D7';
+    del.onclick = function(e) {
+      e.stopPropagation();
+      removeItem(item.id, sourceId); save(); render();
+    };
+    el.appendChild(del);
+  } else {
+    var span = document.createElement('span');
+    span.textContent = item.text;
+    span.style.flex = '1';
+    span.ondblclick = function() {
+      var t = prompt('Editar item:', item.text);
+      if (t && t.trim()) { item.text = t.trim(); save(); render(); }
+    };
+    var del2 = document.createElement('button');
+    del2.className = 'text-del';
+    del2.textContent = '\u00D7';
+    del2.onclick = function(e) {
+      e.stopPropagation();
+      removeItem(item.id, sourceId); save(); render();
+    };
+    el.appendChild(span);
+    el.appendChild(del2);
+  }
+
+  el.addEventListener('dragstart', function() {
+    dragItem = item;
+    dragSource = sourceId;
+    setTimeout(function() { el.classList.add('dragging'); }, 0);
+  });
+  el.addEventListener('dragend', function() {
+    el.classList.remove('dragging');
+    hideIndicator();
+  });
+
+  return el;
+}
+
+function renderPool() {
+  var pool = document.getElementById('pool');
+  pool.innerHTML = '';
+  state.pool.forEach(function(item) {
+    pool.appendChild(buildItemEl(item, 'pool'));
+  });
+
+  pool.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    pool.classList.add('drag-over');
+    var ind = document.getElementById('drop-indicator');
+    var afterEl = getDragAfterElement(pool, e.clientX, e.clientY);
+    if (afterEl) {
+      pool.insertBefore(ind, afterEl);
+    } else {
+      pool.appendChild(ind);
+    }
+    ind.style.display = 'block';
+  });
+
+  pool.addEventListener('dragleave', function(e) {
+    if (!pool.contains(e.relatedTarget)) {
+      pool.classList.remove('drag-over');
+      hideIndicator();
+    }
+  });
+
+  pool.addEventListener('drop', function(e) {
+    e.preventDefault();
+    pool.classList.remove('drag-over');
+    if (e.dataTransfer.files && e.dataTransfer.files.length) {
+      hideIndicator();
+      handleFiles(e.dataTransfer.files, 'pool');
+    } else {
+      var afterEl = getDragAfterElement(pool, e.clientX, e.clientY);
+      var afterId = afterEl ? afterEl.dataset.itemId : null;
+      hideIndicator();
+      dropToPool(afterId);
+    }
+  });
+}
+
+// ── Drag & Drop ───────────────────────────────
+function removeItem(id, src) {
+  if (src === 'pool') {
+    state.pool = state.pool.filter(function(i) { return i.id !== id; });
+  } else {
+    var tier = state.tiers.find(function(t) { return t.id === src; });
+    if (tier) tier.items = tier.items.filter(function(i) { return i.id !== id; });
+  }
+}
+
+function insertItem(arr, item, afterId) {
+  if (!afterId) {
+    arr.push(item);
+  } else {
+    var idx = arr.findIndex(function(i) { return i.id === afterId; });
+    if (idx === -1) {
+      arr.push(item);
+    } else {
+      arr.splice(idx, 0, item);
+    }
+  }
+}
+
+function dropToTier(tierId, afterId) {
+  if (!dragItem) return;
+  var item = dragItem, src = dragSource;
+  dragItem = null; dragSource = null;
+  removeItem(item.id, src);
+  var tier = state.tiers.find(function(t) { return t.id === tierId; });
+  if (tier) insertItem(tier.items, item, afterId);
+  save(); render();
+}
+
+function dropToPool(afterId) {
+  if (!dragItem) return;
+  var item = dragItem, src = dragSource;
+  dragItem = null; dragSource = null;
+  removeItem(item.id, src);
+  insertItem(state.pool, item, afterId);
+  save(); render();
+}
+
+// ── Image Upload ──────────────────────────────
+function handleFiles(files, targetId) {
+  var imgs = Array.from(files).filter(function(f) { return f.type.startsWith('image/'); });
+  if (!imgs.length) return;
+  var pending = imgs.length;
+  imgs.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var item = { id: uid(), text: file.name.replace(/\.[^.]+$/, ''), img: e.target.result };
+      if (targetId === 'pool') {
+        state.pool.push(item);
+      } else {
+        var tier = state.tiers.find(function(t) { return t.id === targetId; });
+        if (tier) tier.items.push(item);
+      }
+      if (--pending === 0) { save(); render(); }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('file-input').addEventListener('change', function(e) {
+  handleFiles(e.target.files, 'pool');
+  e.target.value = '';
+});
+
+var uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('dragover'); });
+uploadZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files, 'pool');
+});
+
+// ── Text Items ────────────────────────────────
+function addTextItem() {
+  var inp = document.getElementById('new-item-input');
+  var text = inp.value.trim();
+  if (!text) return;
+  state.pool.push({ id: uid(), text: text });
+  inp.value = '';
+  save(); render();
+}
+document.getElementById('new-item-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') addTextItem();
+});
+document.getElementById('title-input').addEventListener('input', function(e) {
+  state.title = e.target.value; save();
+});
+
+// ── Add Tier ──────────────────────────────────
+function addTier() {
+  var label = prompt('Nombre de la tier:', 'X');
+  if (!label) return;
+  state.tiers.push({ id: 't' + Date.now(), label: label.slice(0, 40), color: '#888888', items: [] });
+  save(); render();
+}
+
+// ── Color Modal ───────────────────────────────
+function openColorModal(tierId) {
+  editingTierId = tierId;
+  var tier = state.tiers.find(function(t) { return t.id === tierId; });
+  var grid = document.getElementById('color-grid');
+  grid.innerHTML = '';
+  PRESET_COLORS.forEach(function(c) {
+    var sw = document.createElement('div');
+    sw.className = 'color-swatch';
+    sw.style.background = c;
+    sw.onclick = function() { applyColor(c); closeColorModal(); };
+    grid.appendChild(sw);
+  });
+  var col = tier ? tier.color : '#ff9f43';
+  document.getElementById('color-picker-native').value = col;
+  document.getElementById('color-picker-hex').value = col;
+  document.getElementById('color-picker-native').oninput = function(e) {
+    document.getElementById('color-picker-hex').value = e.target.value;
+  };
+  document.getElementById('color-modal').classList.add('open');
+}
+
+function applyColor(color) {
+  var tier = state.tiers.find(function(t) { return t.id === editingTierId; });
+  if (tier) { tier.color = color; save(); render(); }
+}
+
+function applyCustomColor() {
+  var hex = document.getElementById('color-picker-hex').value.trim();
+  var color = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : document.getElementById('color-picker-native').value;
+  applyColor(color);
+  closeColorModal();
+}
+
+function closeColorModal() {
+  document.getElementById('color-modal').classList.remove('open');
+}
+
+// ── Share ─────────────────────────────────────
+function openShare() {
+  try {
+    var encoded = btoa(encodeURIComponent(JSON.stringify(state)));
+    document.getElementById('share-url').textContent =
+      window.location.href.split('#')[0] + '#' + encoded;
+  } catch(e) {
+    document.getElementById('share-url').textContent =
+      'Error al codificar. Comparte el archivo .html directamente.';
+  }
+  document.getElementById('share-modal').classList.add('open');
+}
+
+function closeShare() {
+  document.getElementById('share-modal').classList.remove('open');
+}
+
+function copyUrl() {
+  var url = document.getElementById('share-url').textContent;
+  if (url.startsWith('Error')) return;
+  navigator.clipboard.writeText(url).then(function() {
+    var btn = event.target;
+    btn.textContent = '\u2713 Copiado';
+    setTimeout(function() { btn.textContent = 'Copiar enlace'; }, 2000);
+  });
+}
+
+document.querySelectorAll('.modal-bg').forEach(function(bg) {
+  bg.addEventListener('click', function(e) {
+    if (e.target === bg) { closeColorModal(); closeShare(); }
+  });
+});
+
+render();
+</script>
+</body>
+</html>
